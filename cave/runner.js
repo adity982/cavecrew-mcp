@@ -2695,6 +2695,11 @@ function buildStatus() {
     // markTaskFinished) means this still holds the last task's error after
     // it's done, same as currentTask itself, until the next task replaces it.
     lastError: state.currentTask?.result?.error ?? null,
+    // Driver-issued POSTs (including /eval) are activity even after their
+    // task settles. The separate overseer process uses this timestamp to
+    // avoid filling a think-gap with an autonomous goal. Read-only polling
+    // intentionally does not refresh it.
+    lastCommandAt,
     idleGuard: idleGuardEnabled,
     // Cheap booleans only — full detail (needs, last decision/reflection,
     // calls-this-hour, queue depth) lives on GET /drives, not bloating

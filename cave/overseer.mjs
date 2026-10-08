@@ -67,6 +67,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRconChat } from './rconchat.js'
 import { postStatus, isConfigured as discordConfigured } from './discord.mjs'
+import { recentDriverCommandAt } from './driver-activity.js'
 // DRIVES-PLAN.md §1 / LEAD ANNOTATION E: overseer SKIPS enrolled bots — the
 // drive engine owns their idle. Everything ABOVE the isEnrolled() early
 // return inside tick() below (down-poll alert, failed-task escalation,
@@ -848,6 +849,17 @@ async function tick(bot) {
   // busy bot.
   const IDLE_DEFAULTS_ENABLED = true
   if (!IDLE_DEFAULTS_ENABLED) return
+
+  // A completed /eval leaves no running task, but it is still evidence that
+  // a driver is actively controlling the bot. Keep the idle clock anchored
+  // to the runner's latest POST so eval/audit think-gaps cannot be mistaken
+  // for abandonment. GET /status polling never refreshes this timestamp.
+  const commandAt = recentDriverCommandAt(st.lastCommandAt, now, IDLE_MS)
+  if (commandAt !== null) {
+    s.idleSince = commandAt
+    return
+  }
+
   if (s.idleSince == null) { s.idleSince = now; return }
   if (now - s.idleSince < IDLE_MS) return
 
